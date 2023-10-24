@@ -6,15 +6,42 @@ from enum import Enum
 
 
 COLORS = [
-'#000000', '#141923', '#414168', '#3a7fa7', '#35e3e3', '#8fd970', '#5ebb49',
-'#458352', '#dcd37b', '#fffee5', '#ffd035', '#cc9245', '#a15c3e', '#a42f3b',
-'#f45b7a', '#c24998', '#81588d', '#bcb0c2', '#ffffff',
+    '#000000',  # Negru
+    '#141923',  # Gri închis
+    '#414168',  # Mov închis
+    '#3a7fa7',  # Albastru
+    '#35e3e3',  # Albastru deschis
+    '#8fd970',  # Verde deschis
+    '#5ebb49',  # Verde
+    '#458352',  # Verde închis
+    '#dcd37b',  # Galben
+    '#fffee5',  # Galben deschis
+    '#ffd035',  # Portocaliu
+    '#cc9245',  # Maro
+    '#a15c3e',  # Maro închis
+    '#a42f3b',  # Roșu
+    '#f45b7a',  # Roz deschis
+    '#c24998',  # Roz
+    '#81588d',  # Violet
+    '#bcb0c2',  # Gri deschis
+    '#ffffff',  # Alb
+    '#00ff00',  # Verde lima
+    '#ff6600',  # Portocaliu închis
+    '#9966cc',  # Lavandă
+    '#ffcc00',  # Galben închis
+    '#00ccff',  # Albastru deschis
+    '#993333',  # Maro închis
+    '#00ffcc',  # Verde deschis
+    '#663366',  # Violet închis
+    '#ff33cc',  # Roz intens
+    '#339966'   # Verde închis
 ]
 
 class PenState(Enum):
     NORMAL = 1
     SPRAY = 2
     BRUSH = 3
+    FILL = 4
 
 class Canvas(QtWidgets.QLabel):
     def __init__(self):
@@ -25,18 +52,22 @@ class Canvas(QtWidgets.QLabel):
         self.penState = PenState.NORMAL
         self.last_x, self.last_y = None, None
         self.pen_color = QtGui.QColor('#000000')
+        self.pen_width = 10
+        self.slider = 10
+
+
 
     def set_pen_color(self, c):
         self.pen_color = QtGui.QColor(c)
 
-    def drawSpray(self,e):
+    def drawSpray(self):
         painter = QtGui.QPainter(self.pixmap())
         p = painter.pen()
-        p.setWidth(1)  # Reducem lățimea liniei pentru un efect mai fin
+        p.setWidth(1)
         p.setColor(self.pen_color)
         painter.setPen(p)
 
-        for _ in range(100):
+        for _ in range(self.pen_width*3):
             xo = round(random.gauss(0, 10))
             yo = round(random.gauss(0, 10))
             painter.drawPoint(self.last_x + xo, self.last_y + yo)
@@ -47,7 +78,7 @@ class Canvas(QtWidgets.QLabel):
     def drawNormal(self,e):
         painter = QtGui.QPainter(self.pixmap())
         p = painter.pen()
-        p.setWidth(4)
+        p.setWidth(self.pen_width)
         p.setColor(self.pen_color)
         painter.setPen(p)
         painter.drawLine(self.last_x, self.last_y, e.x(), e.y())
@@ -57,12 +88,12 @@ class Canvas(QtWidgets.QLabel):
     def drawBrush(self, e):
         painter = QtGui.QPainter(self.pixmap())
         p = painter.pen()
-        initial_width = 20
+        initial_width = self.pen_width
 
         #Distanța euclidiană este calculată folosind formula pentru distanța în planul cartezian între două puncte
         #cu cat cursorul se misca mai repede cu atat grosimea pensulei va fi mai mica
         dist = max(1, (self.last_x - e.x()) ** 2 + (self.last_y - e.y()) ** 2)
-        new_width = initial_width / (dist ** 0.3)
+        new_width = initial_width / (dist ** 0.4)
 
         p.setWidth(int(new_width))
         p.setColor(self.pen_color)
@@ -77,6 +108,28 @@ class Canvas(QtWidgets.QLabel):
         self.last_x = e.x()
         self.last_y = e.y()
 
+    def drawFill(self, e):
+        painter = QtGui.QPainter(self.pixmap())
+        p = painter.pen()
+        p.setColor(self.pen_color)
+        painter.setPen(p)
+
+        painter.fillRect(self.rect(), self.pen_color)
+        painter.end()
+        self.update()
+
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        if delta > 0:
+            self.pen_width += 1
+        else:
+            self.pen_width -= 1
+        self.pen_width = max(1, min(self.pen_width, 35))
+
+    def mousePressEvent(self, e):
+        if(self.penState == PenState.FILL):
+            self.drawFill(e)
+
     def mouseMoveEvent(self, e):
         if self.last_x is None:
             self.last_x = e.x()
@@ -86,7 +139,7 @@ class Canvas(QtWidgets.QLabel):
         if(self.penState == PenState.NORMAL):
             self.drawNormal(e)
         elif(self.penState == PenState.SPRAY):
-            self.drawSpray(e)
+            self.drawSpray()
         elif(self.penState == PenState.BRUSH):
             self.drawBrush(e)
 
@@ -109,7 +162,7 @@ class Menu(QtWidgets.QFrame):
         self.canvas = canvas
 
         sizeSlider = QtWidgets.QSlider(Qt.Horizontal)
-        sizeSlider.setRange(5,35)
+        sizeSlider.setRange(1,35)
         sizeSlider.setFixedSize(200, sizeSlider.sizeHint().height())
         layout.addWidget(sizeSlider,2,0,1,2,Qt.AlignmentFlag.AlignCenter)
 
@@ -125,13 +178,15 @@ class Menu(QtWidgets.QFrame):
         buttonPen.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
         layout.addWidget(buttonPen, 1, 0)
 
-        buttonEraser = QtWidgets.QPushButton("Eraser")
-        buttonEraser.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
-        layout.addWidget(buttonEraser, 1, 1)
+        buttonFill = QtWidgets.QPushButton("Fill")
+        buttonFill.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        layout.addWidget(buttonFill, 1, 1)
 
         buttonBrush.clicked.connect(self.onBrush)
         buttonSpray.clicked.connect(self.onSpray)
         buttonPen.clicked.connect(self.onPen)
+        buttonFill.clicked.connect(self.onFill)
+        sizeSlider.valueChanged.connect(self.setSize)
 
     def onSpray(self):
         self.canvas.penState = PenState.SPRAY
@@ -139,6 +194,10 @@ class Menu(QtWidgets.QFrame):
         self.canvas.penState = PenState.BRUSH
     def onPen(self):
         self.canvas.penState = PenState.NORMAL
+    def onFill(self):
+        self.canvas.penState = PenState.FILL
+    def setSize(self,value):
+        self.canvas.pen_width = value
 
 
 class QPaletteButton(QtWidgets.QPushButton):
@@ -153,21 +212,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self):
         super().__init__()
-
         self.canvas = Canvas()
         self.menu = Menu(300,677, self.canvas)
-
         widget = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout()
         widget.setLayout(layout)
-
         layout.addWidget(self.menu)
         layout.addWidget(self.canvas)
-
         palette = QtWidgets.QVBoxLayout()
         self.add_palette_buttons(palette)
         layout.addLayout(palette)
-
         self.setCentralWidget(widget)
 
     def add_palette_buttons(self, layout):
