@@ -7,46 +7,51 @@ from enum import Enum
 
 COLORS = [
     '#000000',  # Negru
-    '#141923',  # Gri închis
-    '#414168',  # Mov închis
-    '#3a7fa7',  # Albastru
-    '#35e3e3',  # Albastru deschis
-    '#8fd970',  # Verde deschis
-    '#5ebb49',  # Verde
-    '#458352',  # Verde închis
-    '#dcd37b',  # Galben
-    '#fffee5',  # Galben deschis
-    '#ffd035',  # Portocaliu
-    '#cc9245',  # Maro
-    '#a15c3e',  # Maro închis
-    '#a42f3b',  # Roșu
-    '#f45b7a',  # Roz deschis
-    '#c24998',  # Roz
-    '#81588d',  # Violet
-    '#bcb0c2',  # Gri deschis
-    '#ffffff',  # Alb
-    '#00ff00',  # Verde lima
-    '#ff6600',  # Portocaliu închis
-    '#9966cc',  # Lavandă
-    '#ffcc00',  # Galben închis
-    '#00ccff',  # Albastru deschis
-    '#993333',  # Maro închis
-    '#00ffcc',  # Verde deschis
-    '#663366',  # Violet închis
-    '#ff33cc',  # Roz intens
-    '#339966'   # Verde închis
+    '#FFFFFF',  # Alb
+    '#808080',  # Gri
+    '#D32F2F',  # Roșu deschis
+    '#1976D2',  # Albastru
+    '#388E3C',  # Verde
+    '#FBC02D',  # Galben deschis
+    '#7B1FA2',  # Mov deschis
+    '#E64A19',  # Portocaliu închis
+    '#0288D1',  # Albastru deschis
+    '#689F38',  # Verde închis
+    '#C2185B',  # Roz
+    '#512DA8',  # Mov închis
+    '#FFA000',  # Portocaliu deschis
+    '#00796B',  # Verde închis
+    '#FF5722',  # Roșu intens
+    '#689F38',  # Verde închis
+    '#D84315',  # Portocaliu închis
+    '#303F9F',  # Albastru închis
+    '#8BC34A',  # Verde deschis
+    '#FBC02D',  # Galben deschis
+    '#8D6E63',  # Maro
+    '#9E9E9E',  # Gri
+    '#F57C00',  # Portocaliu
+    '#673AB7',  # Violet
+    '#3E2723',  # Maro închis
+    '#607D8B',  # Gri deschis
+    '#4CAF50',  # Verde deschis
+    '#FFD600',  # Galben intens
+    '#01579B'   # Albastru închis
 ]
+
+
 
 class PenState(Enum):
     NORMAL = 1
     SPRAY = 2
     BRUSH = 3
     FILL = 4
+    RECTANGLE = 5
+    CIRCLE = 6
 
 class Canvas(QtWidgets.QLabel):
     def __init__(self):
         super().__init__()
-        pixmap = QtGui.QPixmap(1000, 700)
+        pixmap = QtGui.QPixmap(1800, 1000)
         pixmap.fill(Qt.white)
         self.setPixmap(pixmap)
         self.penState = PenState.NORMAL
@@ -54,8 +59,8 @@ class Canvas(QtWidgets.QLabel):
         self.pen_color = QtGui.QColor('#000000')
         self.pen_width = 10
         self.slider = 10
-
-
+        self.rectangle_start_x, self.rectangle_start_y = None, None
+        self.isDrawing = False
 
     def set_pen_color(self, c):
         self.pen_color = QtGui.QColor(c)
@@ -118,6 +123,19 @@ class Canvas(QtWidgets.QLabel):
         painter.end()
         self.update()
 
+    def drawRectangle(self, start_x, start_y, end_x, end_y):
+        painter = QtGui.QPainter(self.pixmap())
+        p = painter.pen()
+        p.setWidth(self.pen_width)
+        p.setColor(self.pen_color)
+        painter.setPen(p)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setOpacity(1.0)
+        painter.drawRect(start_x, start_y, end_x - start_x, end_y - start_y)
+        painter.end()
+        self.update()
+
+
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
         if delta > 0:
@@ -127,8 +145,13 @@ class Canvas(QtWidgets.QLabel):
         self.pen_width = max(1, min(self.pen_width, 35))
 
     def mousePressEvent(self, e):
-        if(self.penState == PenState.FILL):
+        if self.penState == PenState.FILL:
             self.drawFill(e)
+        elif self.penState == PenState.RECTANGLE:
+            self.is_drawing_rectangle = True
+            self.rectangle_start_x = e.x()
+            self.rectangle_start_y = e.y()
+
 
     def mouseMoveEvent(self, e):
         if self.last_x is None:
@@ -142,21 +165,25 @@ class Canvas(QtWidgets.QLabel):
             self.drawSpray()
         elif(self.penState == PenState.BRUSH):
             self.drawBrush(e)
+        elif(self.penState == PenState.RECTANGLE):
+            self.drawRectangle(self.rectangle_start_x, self.rectangle_start_y, e.x(), e.y())
 
         self.last_x = e.x()
         self.last_y = e.y()
 
     def mouseReleaseEvent(self, e):
-        self.last_x = None
-        self.last_y = None
+        if self.isDrawing:
+            self.isDrawing = False
+            self.drawRectangle(self.rectangle_start_x, self.rectangle_start_y, e.x(), e.y())
+        else:
+            self.last_x = None
+            self.last_y = None
 
 
 class Menu(QtWidgets.QFrame):
-    def __init__(self, w, h, canvas):
+    def __init__(self,  canvas):
         super().__init__()
         self.setStyleSheet("background-color: #494d5f")
-
-        self.setFixedSize(w, h)
 
         layout = QtWidgets.QGridLayout(self)
         self.canvas = canvas
@@ -164,7 +191,7 @@ class Menu(QtWidgets.QFrame):
         sizeSlider = QtWidgets.QSlider(Qt.Horizontal)
         sizeSlider.setRange(1,35)
         sizeSlider.setFixedSize(200, sizeSlider.sizeHint().height())
-        layout.addWidget(sizeSlider,2,0,1,2,Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(sizeSlider,3,0,1,2,Qt.AlignmentFlag.AlignCenter)
 
         buttonSpray = QtWidgets.QPushButton("Spray")
         buttonSpray.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
@@ -182,11 +209,22 @@ class Menu(QtWidgets.QFrame):
         buttonFill.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
         layout.addWidget(buttonFill, 1, 1)
 
+        buttonRectangle= QtWidgets.QPushButton("Rectangle")
+        buttonRectangle.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        layout.addWidget(buttonRectangle, 2, 0)
+
+        buttonCircle = QtWidgets.QPushButton("Circle")
+        buttonCircle.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        layout.addWidget(buttonCircle, 2, 1)
+
         buttonBrush.clicked.connect(self.onBrush)
         buttonSpray.clicked.connect(self.onSpray)
         buttonPen.clicked.connect(self.onPen)
         buttonFill.clicked.connect(self.onFill)
+        buttonRectangle.clicked.connect(self.onRectangle)
+        buttonCircle.clicked.connect(self.onCircle)
         sizeSlider.valueChanged.connect(self.setSize)
+
 
     def onSpray(self):
         self.canvas.penState = PenState.SPRAY
@@ -198,6 +236,11 @@ class Menu(QtWidgets.QFrame):
         self.canvas.penState = PenState.FILL
     def setSize(self,value):
         self.canvas.pen_width = value
+    def onRectangle(self):
+        self.canvas.penState = PenState.RECTANGLE
+    def onCircle(self):
+        self.canvas.penState = PenState.CIRCLE
+
 
 
 class QPaletteButton(QtWidgets.QPushButton):
@@ -213,7 +256,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.canvas = Canvas()
-        self.menu = Menu(300,677, self.canvas)
+        self.menu = Menu( self.canvas)
         widget = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout()
         widget.setLayout(layout)
@@ -233,6 +276,5 @@ class MainWindow(QtWidgets.QMainWindow):
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainWindow()
-window.setFixedSize(1300,700)
-window.show()
+window.showMaximized()
 app.exec_()
