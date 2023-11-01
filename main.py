@@ -39,7 +39,6 @@ COLORS = [
 ]
 
 
-
 class PenState(Enum):
     NORMAL = 1
     SPRAY = 2
@@ -60,7 +59,9 @@ class Canvas(QtWidgets.QLabel):
         self.pen_width = 10
         self.slider = 10
         self.rectangle_start_x, self.rectangle_start_y = None, None
-        self.isDrawing = False
+        self.circle_start_x, self.circle_start_y = None, None
+        self.isDrawingRect = False
+        self.isDrawingCircle = False
 
     def set_pen_color(self, c):
         self.pen_color = QtGui.QColor(c)
@@ -135,6 +136,22 @@ class Canvas(QtWidgets.QLabel):
         painter.end()
         self.update()
 
+    def drawCircle(self, x, y):
+        pixmap = self.pixmap()
+        painter = QtGui.QPainter(pixmap)
+        p = painter.pen()
+        p.setWidth(self.pen_width)
+        p.setColor(self.pen_color)
+        painter.setPen(p)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setOpacity(1.0)
+        radius = max(abs(x - self.circle_start_x), abs(y - self.circle_start_y))
+        center_x = (x + self.circle_start_x) // 2
+        center_y = (y + self.circle_start_y) // 2
+        painter.drawEllipse(center_x - radius, center_y - radius, 2 * radius, 2 * radius)
+        painter.end()
+        self.update()
+        
 
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
@@ -151,7 +168,10 @@ class Canvas(QtWidgets.QLabel):
             self.is_drawing_rectangle = True
             self.rectangle_start_x = e.x()
             self.rectangle_start_y = e.y()
-
+        elif self.penState == PenState.CIRCLE:  
+            self.isDrawingCircle = True
+            self.circle_start_x = e.x()
+            self.circle_start_y = e.y()
 
     def mouseMoveEvent(self, e):
         if self.last_x is None:
@@ -167,14 +187,19 @@ class Canvas(QtWidgets.QLabel):
             self.drawBrush(e)
         elif(self.penState == PenState.RECTANGLE):
             self.drawRectangle(self.rectangle_start_x, self.rectangle_start_y, e.x(), e.y())
+        elif self.isDrawingCircle:  
+            self.drawCircle(e.x(), e.y())
 
         self.last_x = e.x()
         self.last_y = e.y()
 
     def mouseReleaseEvent(self, e):
-        if self.isDrawing:
-            self.isDrawing = False
+        if self.isDrawingRect:
+            self.isDrawingRect = False
             self.drawRectangle(self.rectangle_start_x, self.rectangle_start_y, e.x(), e.y())
+        elif self.isDrawingCircle:  
+            self.isDrawingCircle = False
+            self.drawCircle(e.x(), e.y())
         else:
             self.last_x = None
             self.last_y = None
@@ -225,7 +250,6 @@ class Menu(QtWidgets.QFrame):
         buttonCircle.clicked.connect(self.onCircle)
         sizeSlider.valueChanged.connect(self.setSize)
 
-
     def onSpray(self):
         self.canvas.penState = PenState.SPRAY
     def onBrush(self):
@@ -240,7 +264,6 @@ class Menu(QtWidgets.QFrame):
         self.canvas.penState = PenState.RECTANGLE
     def onCircle(self):
         self.canvas.penState = PenState.CIRCLE
-
 
 
 class QPaletteButton(QtWidgets.QPushButton):
@@ -272,7 +295,6 @@ class MainWindow(QtWidgets.QMainWindow):
             b = QPaletteButton(c)
             b.pressed.connect(lambda c=c: self.canvas.set_pen_color(c))
             layout.addWidget(b)
-
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainWindow()
