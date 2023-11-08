@@ -200,6 +200,8 @@ class Canvas(QtWidgets.QLabel):
         elif self.isDrawingCircle:  
             self.isDrawingCircle = False
             self.drawCircle(e.x(), e.y())
+            self.last_x = None
+            self.last_y = None
         else:
             self.last_x = None
             self.last_y = None
@@ -217,29 +219,48 @@ class Menu(QtWidgets.QFrame):
         sizeSlider.setRange(1,35)
         sizeSlider.setFixedSize(200, sizeSlider.sizeHint().height())
         layout.addWidget(sizeSlider,3,0,1,2,Qt.AlignmentFlag.AlignCenter)
+        sizeSlider.setStyleSheet(
+            """
+            QSlider::groove:horizontal {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #0078d7, stop:1 #00bfff);
+                border: 1px solid #0078d7;
+                height: 8px;
+                border-radius: 4px;
+            }
 
-        buttonSpray = QtWidgets.QPushButton("Spray")
-        buttonSpray.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+            QSlider::handle:horizontal {
+                background: #00bfff;
+                border: 1px solid #0078d7;
+                width: 16px;
+                height: 16px;
+                margin: -8px 0px; 
+                border-radius: 8px;
+            }
+
+            QSlider::add-page:horizontal {
+                background: #0078d7;
+                border: 1px solid #0078d7;
+                border-radius: 4px;
+            }
+            """
+        )
+
+        buttonSpray = self.create_button("./icons/spray.png", "")
         layout.addWidget(buttonSpray, 0, 0)
 
-        buttonBrush = QtWidgets.QPushButton("Brush")
-        buttonBrush.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        buttonBrush = self.create_button('./icons/brush.png', "")
         layout.addWidget(buttonBrush, 0, 1)
 
-        buttonPen = QtWidgets.QPushButton("Pen")
-        buttonPen.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        buttonPen = self.create_button('./icons/pencil.png', "")
         layout.addWidget(buttonPen, 1, 0)
 
-        buttonFill = QtWidgets.QPushButton("Fill")
-        buttonFill.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        buttonFill = self.create_button('./icons/fill.png', "")
         layout.addWidget(buttonFill, 1, 1)
 
-        buttonRectangle= QtWidgets.QPushButton("Rectangle")
-        buttonRectangle.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        buttonRectangle = self.create_button('./icons/square.png', "")
         layout.addWidget(buttonRectangle, 2, 0)
 
-        buttonCircle = QtWidgets.QPushButton("Circle")
-        buttonCircle.setStyleSheet("background-color: #333; color: white; padding: 5px 10px")
+        buttonCircle = self.create_button('./icons/circle.png', "")
         layout.addWidget(buttonCircle, 2, 1)
 
         buttonBrush.clicked.connect(self.onBrush)
@@ -264,6 +285,25 @@ class Menu(QtWidgets.QFrame):
         self.canvas.penState = PenState.RECTANGLE
     def onCircle(self):
         self.canvas.penState = PenState.CIRCLE
+
+    def create_button(self,icon_path, text):
+        button = QtWidgets.QPushButton()
+        button.setIconSize(QtCore.QSize(40, 40))  
+        button.setIcon(QtGui.QIcon(icon_path))
+        button.setText(text)
+        button.setStyleSheet(
+            "QPushButton {"
+            "background-color: #333;"
+            "color: white;"
+            "padding: 10px;"
+            "border: 2px solid #555;"  
+            "border-radius: 15px;"  
+            "}"
+            "QPushButton:hover {"
+            "background-color: #555;"  
+            "}"
+        )
+        return button
 
 
 class QPaletteButton(QtWidgets.QPushButton):
