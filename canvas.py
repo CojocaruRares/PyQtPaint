@@ -101,8 +101,8 @@ class Canvas(QtWidgets.QLabel):
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setOpacity(1.0)
         radius = max(abs(x - self.circle_start_x), abs(y - self.circle_start_y))
-        center_x = (x + self.circle_start_x) // 2
-        center_y = (y + self.circle_start_y) // 2
+        center_x = self.circle_start_x
+        center_y =  self.circle_start_y
         painter.drawEllipse(center_x - radius, center_y - radius, 2 * radius, 2 * radius)
         painter.end()
         self.update()
