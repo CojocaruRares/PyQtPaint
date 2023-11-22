@@ -51,11 +51,16 @@ class Canvas(QtWidgets.QLabel):
         p = painter.pen()
         initial_width = self.pen_width
 
-        #Distanța euclidiană este calculată folosind formula pentru distanța în planul cartezian între două puncte
-        #cu cat cursorul se misca mai repede cu atat grosimea pensulei va fi mai mica
-        dist = max(1, (self.last_x - e.x()) ** 2 + (self.last_y - e.y()) ** 2)
-        new_width = initial_width / (dist ** 0.4)
+        minDist = 1
+        maxDist = 50
 
+        minBrushSize = 1
+        maxBrushSize = initial_width
+
+        dist =  ((self.last_x - e.x()) ** 2 + (self.last_y - e.y()) ** 2)**0.5
+        print(dist)
+        new_width = max(1, maxBrushSize - (minBrushSize + (dist-minDist) * ((maxBrushSize - minBrushSize)/(maxDist - minDist))))
+        
         p.setWidth(int(new_width))
         p.setColor(self.pen_color)
         painter.setPen(p)
